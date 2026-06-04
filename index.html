@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>社畜過馬路 3.0 - Office Survivor Cute</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .cute-font {
+            font-family: 'Fredoka One', 'Noto Sans TC', sans-serif;
+        }
+        /* 可愛果凍彈跳動畫 */
+        @keyframes jelly {
+            0%, 100% { transform: scale(1, 1); }
+            30% { transform: scale(1.25, 0.75); }
+            40% { transform: scale(0.75, 1.25); }
+            50% { transform: scale(1.15, 0.85); }
+            65% { transform: scale(0.95, 1.05); }
+            75% { transform: scale(1.05, 0.95); }
+        }
+        .jelly-hover:hover {
+            animation: jelly 0.8s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-indigo-950 text-white min-h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <!-- 主遊戲容器 -->
+    <div class="relative w-full max-w-md h-screen flex flex-col justify-between bg-slate-900 shadow-2xl overflow-hidden border-4 border-indigo-800 rounded-3xl">
+        
+        <!-- 頂部高階 HUD (狀態列) -->
+        <div class="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-indigo-950/80 to-transparent flex justify-between items-start">
+            <div class="bg-indigo-900/90 border-2 border-indigo-400/50 px-3 py-1.5 rounded-2xl flex flex-col shadow-lg">
+                <span class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">當前 KPI 樓層</span>
+                <span class="text-2xl font-black text-yellow-300 cute-font" id="scoreDisplay">000 <span class="text-xs font-normal text-white">F</span></span>
+            </div>
+            
+            <!-- 無敵狀態倒數條 -->
+            <div id="coffeeShieldBar" class="hidden flex-1 mx-3 bg-amber-500/90 border-2 border-amber-300 px-2 py-1 rounded-xl flex flex-col justify-center shadow-lg">
+                <span class="text-[10px] text-amber-950 font-black text-center animate-bounce">☕ 終極美式！無敵衝鋒中</span>
+                <div class="w-full bg-amber-950/40 h-2 rounded-full overflow-hidden mt-0.5">
+                    <div id="shieldProgress" class="bg-white h-full w-full"></div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-900/90 border-2 border-indigo-400/50 px-3 py-1.5 rounded-2xl text-right flex flex-col shadow-lg">
+                <span class="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">生涯最高</span>
+                <span class="text-lg font-bold text-pink-300 cute-font" id="highScoreDisplay">000 F</span>
+            </div>
+        </div>
+
+        <!-- 遊戲主體 Canvas 容器 -->
+        <div class="relative flex-1 w-full h-full bg-slate-950 flex items-center justify-center">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+            
+            <!-- 裁員夾板逼近警報 (萌化警示) -->
+            <div id="warningBanner" class="absolute top-16 left-1/2 transform -translate-x-1/2 bg-rose-500 text-white font-black text-xs px-4 py-2 rounded-full shadow-lg border-2 border-white animate-bounce hidden z-10">
+                😱 哇啊啊！「裁員夾板」要壓扁你啦！快爬樓梯！
+            </div>
+        </div>
+
+        <!-- 圓滾滾質感虛擬按鍵 -->
+        <div class="p-4 bg-indigo-900/95 border-t-4 border-indigo-800 z-10 flex flex-col items-center justify-center select-none shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div class="grid grid-cols-3 gap-2 w-44 aspect-square">
+                <div></div>
+                <button id="btnUp" class="bg-amber-400 active:bg-amber-500 text-amber-950 rounded-2xl flex items-center justify-center text-xl transition-all transform active:scale-90 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 15l7-7 7 7"></path></svg>
+                </button>
+                <div></div>
+                <button id="btnLeft" class="bg-amber-400 active:bg-amber-500 text-amber-950 rounded-2xl flex items-center justify-center text-xl transition-all transform active:scale-90 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button id="btnDown" class="bg-amber-400 active:bg-amber-500 text-amber-950 rounded-2xl flex items-center justify-center text-xl transition-all transform active:scale-90 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <button id="btnRight" class="bg-amber-400 active:bg-amber-500 text-amber-950 rounded-2xl flex items-center justify-center text-xl transition-all transform active:scale-90 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+            <p class="text-[10px] text-indigo-300 mt-2 font-bold text-center">可使用 W,A,S,D 或滑動螢幕，角色有超可愛彈力物理哦！</p>
+        </div>
+
+        <!-- 1. 開始選單 / 角色選擇 / 新手教學 (Overlay) -->
+        <div id="startScreen" class="absolute inset-0 z-20 bg-indigo-950 flex flex-col justify-between p-6 overflow-y-auto">
+            <div class="text-center mt-2">
+                <div class="inline-block px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full text-xs font-bold mb-1 tracking-widest border border-pink-500/30 animate-pulse">
+                    OFFICE SURVIVOR CUTE ★ 3.0
+                </div>
+                <h1 class="text-4xl font-extrabold cute-font text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-cyan-300 tracking-tight leading-none drop-shadow">
+                    社畜過馬路 3.0
+                </h1>
+                <p class="text-indigo-200 text-xs mt-2">超生動彈跳！閃躲大頭老闆、踩著鍵盤滑過咖啡河！</p>
+            </div>
+
+            <!-- 萌系超明確圖解說明 -->
+            <div class="bg-indigo-900/60 border-2 border-indigo-500/30 rounded-2xl p-3 my-2 shadow-inner">
+                <h3 class="text-xs text-yellow-300 font-bold mb-2 flex items-center gap-1.5 cute-font">
+                    ⭐️ 新手打卡指南 ⭐️
+                </h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-start gap-1.5 bg-indigo-950/60 p-2 rounded-xl border border-indigo-800">
+                        <div class="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-amber-950 font-black text-[10px]">1</div>
+                        <div>
+                            <p class="font-bold text-white">點擊或滑動</p>
+                            <p class="text-indigo-200 text-[9px] leading-tight">控制圓滾滾社畜上下左右歡樂彈跳。</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-1.5 bg-indigo-950/60 p-2 rounded-xl border border-indigo-800">
+                        <div class="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center text-amber-950 font-black text-[10px]">2</div>
+                        <div>
+                            <p class="font-bold text-amber-300">灌黃金美式 ☕</p>
+                            <p class="text-indigo-200 text-[9px] leading-tight">化身無敵超人，<span class="text-yellow-300 font-bold">可一腳踢飛</span>迎面的老闆！</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-1.5 bg-indigo-950/60 p-2 rounded-xl border border-indigo-800 col-span-2">
+                        <div class="w-5 h-5 rounded-full bg-rose-400 flex items-center justify-center text-rose-950 font-black text-[10px]">3</div>
+                        <div>
+                            <p class="font-bold text-rose-300">救命！別被名單壓扁</p>
+                            <p class="text-indigo-200 text-[9px] leading-tight">後方升起的「裁員名單夾板」會像大嘴巴一樣把遲到的社畜咬扁碎裂！請全速前進！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 角色選擇區 -->
+            <div>
+                <h2 class="text-xs text-indigo-300 font-bold mb-1.5 text-center uppercase tracking-wider">選擇你今天的爆肝面具</h2>
+                <div class="grid grid-cols-2 gap-2" id="characterGrid">
+                    <!-- 角色 1 -->
+                    <button onclick="selectChar(0)" id="char-0" class="char-card jelly-hover bg-indigo-900 border-2 border-yellow-400 p-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 shadow-md">
+                        <div class="w-12 h-12 flex items-center justify-center bg-indigo-950/80 rounded-xl mb-1 border border-indigo-700" id="preview-0"></div>
+                        <span class="font-bold text-xs text-white">爆肝工程師</span>
+                        <span class="text-[9px] text-cyan-300 font-bold mt-0.5">特技：跑得稍快</span>
+                    </button>
+                    <!-- 角色 2 -->
+                    <button onclick="selectChar(1)" id="char-1" class="char-card jelly-hover bg-indigo-900 border border-indigo-800 p-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 shadow-md">
+                        <div class="w-12 h-12 flex items-center justify-center bg-indigo-950/80 rounded-xl mb-1 border border-indigo-700" id="preview-1"></div>
+                        <span class="font-bold text-xs text-white">菜鳥實習生</span>
+                        <span class="text-[9px] text-amber-300 font-bold mt-0.5">特技：小巧好閃避</span>
+                    </button>
+                    <!-- 角色 3 -->
+                    <button onclick="selectChar(2)" id="char-2" class="char-card jelly-hover bg-indigo-900 border border-indigo-800 p-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 shadow-md">
+                        <div class="w-12 h-12 flex items-center justify-center bg-indigo-950/80 rounded-xl mb-1 border border-indigo-700" id="preview-2"></div>
+                        <span class="font-bold text-xs text-white">全能秘書</span>
+                        <span class="text-[9px] text-pink-300 font-bold mt-0.5">特技：咖啡時間超長</span>
+                    </button>
+                    <!-- 角色 4 -->
+                    <button onclick="selectChar(3)" id="char-3" class="char-card jelly-hover bg-indigo-900 border border-indigo-800 p-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 shadow-md">
+                        <div class="w-12 h-12 flex items-center justify-center bg-indigo-950/80 rounded-xl mb-1 border border-indigo-700" id="preview-3"></div>
+                        <span class="font-bold text-xs text-white">黃金業務</span>
+                        <span class="text-[9px] text-emerald-300 font-bold mt-0.5">特技：橫向移速神級</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 開始按鈕 -->
+            <div class="mt-2">
+                <button id="btnStartGame" class="w-full py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-amber-950 font-black rounded-2xl text-md shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none transition-all uppercase tracking-widest cute-font jelly-hover">
+                    衝吧！登入打卡 💼
+                </button>
+                <div class="flex justify-between mt-2 px-1">
+                    <button id="btnToggleSound" class="text-[10px] text-indigo-300 font-bold hover:text-white flex items-center gap-1">
+                        🔊 聲音：開啟
+                    </button>
+                    <span class="text-[10px] text-indigo-400 font-bold">
+                        Q萌彈跳版 v3.0
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 結算畫面 (Overlay) -->
+        <div id="gameOverScreen" class="absolute inset-0 z-20 bg-indigo-950/95 flex flex-col items-center justify-center p-6 hidden">
+            <div class="bg-indigo-900 border-4 border-rose-500 p-6 rounded-3xl w-full text-center max-w-xs shadow-2xl relative">
+                
+                <!-- 結束大表情圖 -->
+                <div class="w-16 h-16 bg-rose-500/20 border-2 border-rose-400 rounded-2xl flex items-center justify-center mx-auto mb-4" id="gameOverAnimBox">
+                    <!-- JS 動態更換 SVG/表情 -->
+                </div>
+
+                <h2 class="text-2xl font-black text-rose-400 uppercase tracking-wider mb-1 cute-font" id="gameOverTitle">您被開除了！</h2>
+                <p class="text-indigo-200 text-xs px-2 mb-4" id="gameOverReason">原因：在辦公室過馬路時被老闆逮個正著。</p>
+
+                <div class="space-y-3 mb-6 bg-indigo-950 p-4 rounded-2xl border-2 border-indigo-800">
+                    <div>
+                        <p class="text-[10px] text-indigo-400 uppercase font-bold tracking-wider">本次上班績效</p>
+                        <p class="text-3xl font-black text-yellow-300 cute-font" id="finalScore">000 <span class="text-sm font-normal text-white">F</span></p>
+                    </div>
+                    <div class="border-t border-indigo-800 pt-2 flex justify-between items-center px-4">
+                        <span class="text-[10px] text-indigo-400 uppercase font-bold tracking-wider">生涯最高紀錄</span>
+                        <span class="text-sm font-bold text-pink-300 cute-font" id="finalHighScore">000 F</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <button id="btnRestart" class="w-full py-3 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-extrabold rounded-2xl text-sm shadow-[0_4px_0_#064e3b] active:translate-y-1 active:shadow-none transition-all jelly-hover">
+                        再簽一份新合約 (重來) 🔄
+                    </button>
+                    <button id="btnBackToMenu" class="w-full py-2 bg-indigo-800 hover:bg-indigo-750 text-indigo-200 font-bold rounded-xl text-xs transition-all">
+                        更換其他爆肝社畜 🏠
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 遊戲邏輯 JS -->
+    <script>
+        // --- 1. 遊戲基礎設定與音效引擎 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 音效控制
+        let isSoundEnabled = true;
+        const btnToggleSound = document.getElementById('btnToggleSound');
+        btnToggleSound.addEventListener('click', () => {
+            isSoundEnabled = !isSoundEnabled;
+            btnToggleSound.innerHTML = isSoundEnabled ? '🔊 聲音：開啟' : '🔇 聲音：關閉';
+        });
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (!isSoundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'jump') {
+                    // Q彈向上的跳躍聲
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(550, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'coffee') {
+                    // 閃亮能量充沛聲
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(450, now);
+                    osc.frequency.setValueAtTime(600, now + 0.08);
+                    osc.frequency.setValueAtTime(800, now + 0.16);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'hit') {
+                    // 喜劇感撞擊聲
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(250, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.4);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                } else if (type === 'splash') {
+                    // 水花下沉聲
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.6);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                } else if (type === 'warn') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(500, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                }
+            } catch (e) {
+                console.log("Audio Error:", e);
+            }
+        }
+
+        // --- 2. Q萌生動向量繪製器（黏土感、生動表情與肢體） ---
+        const VectorGraphics = {
+            // 繪製圓滾滾Q版玩家
+            drawPlayer: (ctx, x, y, charIndex, frame, state = 'live', progress = 1, moveDir = {dx:0, dy:1}) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 計算擠壓拉伸比例 (Squash & Stretch)
+                let scaleX = 1;
+                let scaleY = 1;
+                let bobY = 0;
+
+                if (state === 'live') {
+                    if (progress < 1) {
+                        // 跳躍中段：拉長，落地時：擠壓扁平
+                        const jumpSine = Math.sin(progress * Math.PI);
+                        scaleY = 1 + jumpSine * 0.22;
+                        scaleX = 1 - jumpSine * 0.15;
+                        bobY = -jumpSine * 18; // 跳起高度
+                    } else {
+                        // 原地呼吸微幅律動
+                        scaleY = 1 + Math.sin(frame * 0.15) * 0.03;
+                        scaleX = 1 - Math.sin(frame * 0.15) * 0.03;
+                    }
+                } else if (state === 'splash') {
+                    // 落水動畫：逐漸縮小、旋轉，最後沉沒
+                    const sProgress = progress; // 0 (開始落水) 到 1 (完全沉入)
+                    ctx.rotate(sProgress * Math.PI * 1.5);
+                    scaleX = (1 - sProgress) * 0.8;
+                    scaleY = (1 - sProgress) * 0.8;
+                    bobY = sProgress * 25; // 往下沉
+                } else if (state === 'dead') {
+                    // 撞擊被打成石膏或旋轉升天靈魂
+                    const dProgress = progress;
+                    ctx.rotate(dProgress * Math.PI * 4); // 瘋狂轉圈
+                    scaleX = 1 - dProgress * 0.5;
+                    scaleY = 1 - dProgress * 0.5;
+                    bobY = -dProgress * 50; // 原地起飛
+                } else if (state === 'crushed') {
+                    // 被夾板拍扁
+                    scaleY = 0.12;
+                    scaleX = 1.6;
+                }
+
+                ctx.scale(scaleX, scaleY);
+                ctx.translate(0, bobY);
+
+                // 如果是靈魂出竅狀態，上淡淡透明
+                if (state === 'dead' && progress > 0.1) {
+                    ctx.globalAlpha = Math.max(0, 1 - progress);
+                }
+
+                // 顏色定義 (馬卡龍粉色系)
+                let bodyColor = '#4f46e5'; // 爆肝工程師：粉藍紫
+                let skinColor = '#fed7aa'; // 溫暖膚色
+                let hairColor = '#334155';
+                let specialAttr = 'glasses';
+
+                if (charIndex === 1) { // 菜鳥實習生
+                    bodyColor = '#06b6d4'; // 水藍
+                    hairColor = '#475569';
+                    specialAttr = 'cheeks';
+                } else if (charIndex === 2) { // 全能秘書
+                    bodyColor = '#f43f5e'; // 蜜桃粉
+                    hairColor = '#eab308';
+                    specialAttr = 'hairbow';
+                } else if (charIndex === 3) { // 黃金業務
+                    bodyColor = '#059669'; // 翡翠綠
+                    hairColor = '#78350f';
+                    specialAttr = 'tie';
+                }
+
+                // 1. 兩條圓滾滾的小胖腿
+                if (state !== 'splash' && state !== 'crushed') {
+                    ctx.fillStyle = '#64748b';
+                    const legSwing = (state === 'live' && progress < 1) ? Math.sin(progress * Math.PI * 2) * 5 : 0;
+                    ctx.beginPath();
+                    ctx.arc(-5, 8 + legSwing, 4, 0, Math.PI * 2);
+                    ctx.arc(5, 8 - legSwing, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 2. 圓潤身體 (像個胖乎乎的黏土娃娃)
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.roundRect(-12, -14, 24, 22, 10);
+                ctx.fill();
+
+                // 3. 白襯衫前胸
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-5, -14);
+                ctx.lineTo(5, -14);
+                ctx.quadraticCurveTo(0, -10, 0, -4);
+                ctx.closePath();
+                ctx.fill();
+
+                // 領帶
+                if (specialAttr === 'tie') {
+                    ctx.fillStyle = '#dc2626';
+                    ctx.fillRect(-2, -7, 4, 10);
+                }
+
+                // 4. Q萌大頭
+                ctx.fillStyle = skinColor;
+                ctx.beginPath();
+                ctx.arc(0, -22, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 5. 髮型
+                ctx.fillStyle = hairColor;
+                ctx.beginPath();
+                if (charIndex === 2) { // 秘書馬尾與蝴蝶結
+                    ctx.arc(0, -24, 11, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 馬尾
+                    ctx.beginPath();
+                    ctx.arc(-11, -22, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 紅色蝴蝶結
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.moveTo(-7, -26); ctx.lineTo(-13, -29); ctx.lineTo(-13, -23); ctx.closePath();
+                    ctx.moveTo(-7, -26); ctx.lineTo(-4, -29); ctx.lineTo(-4, -23); ctx.closePath();
+                    ctx.fill();
+                } else if (charIndex === 1) { // 實習生小呆毛
+                    ctx.arc(0, -24, 11, Math.PI, 0);
+                    ctx.fill();
+                    // 呆毛
+                    ctx.strokeStyle = hairColor;
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -32);
+                    ctx.quadraticCurveTo(5, -37, 8, -34);
+                    ctx.stroke();
+                } else {
+                    ctx.arc(0, -24, 11, Math.PI, 0);
+                    ctx.fill();
+                }
+
+                // 6. 紅潤腮紅 (超可愛重點)
+                ctx.fillStyle = '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(-6, -20, 2.5, 0, Math.PI * 2);
+                ctx.arc(6, -20, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 7. 動態五官表情（依照狀態切換表情）
+                ctx.fillStyle = '#1e293b'; // 眼睛嘴巴顏色
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+
+                let isCoffeeActive = player.isCoffeeActive;
+                let warningActive = (player.y - layoffY < 130);
+
+                if (state === 'dead' || state === 'splash' || state === 'crushed') {
+                    // 痛哭 / 翻白眼表情 (X X)
+                    ctx.beginPath();
+                    ctx.moveTo(-6, -23); ctx.lineTo(-2, -19);
+                    ctx.moveTo(-2, -23); ctx.lineTo(-6, -19);
+                    ctx.moveTo(2, -23); ctx.lineTo(6, -19);
+                    ctx.moveTo(6, -23); ctx.lineTo(2, -19);
+                    ctx.stroke();
+
+                    // 大張著的哭喊嘴巴
+                    ctx.fillStyle = '#be123c';
+                    ctx.beginPath();
+                    ctx.arc(0, -16, 3.5, 0, Math.PI, false);
+                    ctx.fill();
+                } else if (isCoffeeActive) {
+                    // 喝美式超威墨鏡表情 (😎)
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.roundRect(-8, -23, 7, 5, 2);
+                    ctx.roundRect(1, -23, 7, 5, 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(-1, -21); ctx.lineTo(1, -21);
+                    ctx.stroke();
+
+                    // 自信笑嘴
+                    ctx.beginPath();
+                    ctx.arc(0, -17, 3, 0, Math.PI);
+                    ctx.stroke();
+                } else if (warningActive) {
+                    // 裁員風暴逼近時的驚恐大眼表情 (😱)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(-4, -22, 2.5, 0, Math.PI*2);
+                    ctx.arc(4, -22, 2.5, 0, Math.PI*2);
+                    ctx.fill();
+                    // 白色驚恐眼白/眼球亮點
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(-3.5, -22.5, 1, 0, Math.PI*2);
+                    ctx.arc(4.5, -22.5, 1, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // O字大嘴
+                    ctx.fillStyle = '#991b1b';
+                    ctx.beginPath();
+                    ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 正常狀態：開朗眨眼/微笑 (😃)
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(-4, -21, 2, 0, Math.PI * 2);
+                    ctx.arc(4, -21, 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 彎彎微笑
+                    ctx.beginPath();
+                    ctx.arc(0, -17, 3.5, 0, Math.PI);
+                    ctx.stroke();
+                }
+
+                // 8. 戴眼鏡特效 (如果是工程師)
+                if (charIndex === 0 && state !== 'crushed') {
+                    ctx.strokeStyle = '#0284c7';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-8, -24, 7, 7, 2);
+                    ctx.roundRect(1, -24, 7, 7, 2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            },
+
+            // 繪製圓鼓鼓的大頭憤怒老闆
+            drawBoss: (ctx, x, y, speed, frame) => {
+                ctx.save();
+                ctx.translate(x, y);
+                if (speed < 0) ctx.scale(-1, 1);
+
+                // 可愛小碎步
+                const step = Math.sin(frame * 0.3) * 4;
+                const bob = Math.abs(Math.sin(frame * 0.3)) * 3;
+
+                // 1. 兩條黑色小短腿
+                ctx.fillStyle = '#020617';
+                ctx.beginPath();
+                ctx.arc(-6, 8 + step, 4, 0, Math.PI * 2);
+                ctx.arc(6, 8 - step, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 2. 圓滾滾的大胸膛 (黑色西裝)
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.roundRect(-14, -13 - bob, 28, 22, 10);
+                ctx.fill();
+
+                // 紅色領帶
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-5, -13 - bob); ctx.lineTo(5, -13 - bob); ctx.lineTo(0, -6 - bob);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-2, -9 - bob, 4, 11);
+
+                // 3. 超巨大紅潤憤怒頭
+                ctx.fillStyle = '#fca5a5'; // 紅通通的憤怒臉
+                ctx.beginPath();
+                ctx.arc(0, -22 - bob, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 地中海秃頭或黑邊髮 (充滿主管感)
+                ctx.fillStyle = '#475569';
+                ctx.beginPath();
+                ctx.arc(-11, -22 - bob, 4, 0, Math.PI * 2);
+                ctx.arc(11, -22 - bob, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 4. 憤怒的生動五官
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2.5;
+                // 憤怒挑眉
+                ctx.beginPath();
+                ctx.moveTo(-8, -28 - bob); ctx.lineTo(-3, -25 - bob);
+                ctx.moveTo(8, -28 - bob); ctx.lineTo(3, -25 - bob);
+                ctx.stroke();
+
+                // 白眼球帶黑點
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-4, -22 - bob, 3, 0, Math.PI * 2);
+                ctx.arc(4, -22 - bob, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-3, -22 - bob, 1.5, 0, Math.PI * 2);
+                ctx.arc(3, -22 - bob, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 碎碎念/生氣張開的圓嘴巴
+                const mouthSize = 3.5 + Math.sin(frame * 0.4) * 1.5;
+                ctx.fillStyle = '#991b1b';
+                ctx.beginPath();
+                ctx.arc(0, -15 - bob, mouthSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 生氣十字路 💢
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(11, -30 - bob); ctx.lineTo(17, -30 - bob);
+                ctx.moveTo(14, -33 - bob); ctx.lineTo(14, -27 - bob);
+                ctx.stroke();
+
+                ctx.restore();
+            },
+
+            // 像小鳥一樣拍打翅膀的「特急公文」
+            drawPaper: (ctx, x, y, frame) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 拍紙翅膀動畫
+                const wing = Math.sin(frame * 0.4) * 8;
+
+                // 繪製紙本體 (黃色信封或白色合約紙)
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(-12, -8 + wing);
+                ctx.lineTo(0, -12);
+                ctx.lineTo(12, -8 + wing);
+                ctx.lineTo(12, 8 - wing);
+                ctx.lineTo(0, 12);
+                ctx.lineTo(-12, 8 - wing);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // 紅色「極急！」大鋼印印章
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-4, -4, 8, 8);
+
+                ctx.restore();
+            },
+
+            // 來電震動的奪命手機
+            drawPhone: (ctx, x, y, frame) => {
+                ctx.save();
+                ctx.translate(x, y);
+                // 左右震動晃動
+                const shake = Math.sin(frame * 1.6) * 4;
+                ctx.translate(shake, 0);
+
+                // 亮彩色手機本體
+                ctx.fillStyle = '#312e81';
+                ctx.beginPath();
+                ctx.roundRect(-8, -15, 16, 30, 5);
+                ctx.fill();
+
+                // 來電大紅螢幕閃爍
+                ctx.fillStyle = (frame % 8 < 4) ? '#f43f5e' : '#1e1b4b';
+                ctx.fillRect(-6, -11, 12, 19);
+
+                // 可愛電話小符號
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 8px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('📞', 0, -1);
+
+                // 俏皮震動波
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(-13, 0, 5, -Math.PI/2, Math.PI/2, true);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(13, 0, 5, -Math.PI/2, Math.PI/2, false);
+                ctx.stroke();
+
+                ctx.restore();
+            },
+
+            // 冒出熱氣煙霧的老舊印表機
+            drawCopier: (ctx, x, y, frame) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                const shake = Math.sin(frame * 0.8) * 1.5;
+                ctx.translate(0, shake);
+
+                // 印表機胖機身
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.roundRect(-16, -6, 32, 18, 5);
+                ctx.fill();
+
+                // 紙匣卡紙
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-10, -14, 20, 10);
+                // 可愛表情 (眼睛嘴巴表示卡紙很痛)
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-5, -12, 2, 2);
+                ctx.fillRect(3, -12, 2, 2);
+                ctx.fillRect(-2, -9, 4, 1.5);
+
+                // 冒煙粒子
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                for (let i = 0; i < 3; i++) {
+                    const smokeY = -18 - ((frame + i * 20) % 30);
+                    const smokeX = -12 + (i * 12) + Math.sin((frame + i * 15) * 0.1) * 3;
+                    const smokeSize = 3 + (30 + smokeY) * 0.1;
+                    ctx.beginPath();
+                    ctx.arc(smokeX, smokeY, Math.max(1, smokeSize), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            },
+
+            // 具有可愛彈簧晃動的辦公椅
+            drawChair: (ctx, x, y, width) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 左右微幅搖擺
+                const sway = Math.sin(Date.now() / 150) * 0.08;
+                ctx.rotate(sway);
+
+                // 椅背坐墊 (亮橘馬卡龍色)
+                ctx.fillStyle = '#fb923c';
+                ctx.beginPath();
+                ctx.roundRect(-width/2, -14, width, 24, 8);
+                ctx.fill();
+
+                // 拼色設計
+                ctx.fillStyle = '#ffedd5';
+                ctx.beginPath();
+                ctx.roundRect(-width/2 + 6, -10, width - 12, 16, 4);
+                ctx.fill();
+
+                // 椅腳小滾輪 (可愛黑點)
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(-width/3, 15, 3.5, 0, Math.PI * 2);
+                ctx.arc(width/3, 15, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            },
+
+            // 電競 RGB 發光彩虹鍵盤 (可愛版)
+            drawKeyboard: (ctx, x, y, width) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 鍵盤圓潤外殼
+                ctx.fillStyle = '#1e1b4b';
+                ctx.beginPath();
+                ctx.roundRect(-width/2, -11, width, 22, 6);
+                ctx.fill();
+
+                // 七彩 RGB 漸變鍵帽
+                const keyGap = 7;
+                const keysCount = Math.floor(width / keyGap) - 1;
+                for (let k = 0; k < keysCount; k++) {
+                    const keyX = -width/2 + 6 + k * keyGap;
+                    // 彩虹隨時間流動色
+                    const hue = (k * 20 + Date.now() / 15) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 85%, 65%)`;
+                    ctx.beginPath();
+                    ctx.roundRect(keyX, -6, 5, 12, 1.5);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            },
+
+            // 綠意盎然的大頭盆栽 🪴
+            drawPlant: (ctx, x, y) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 呼吸微胖動態
+                const pulse = 1 + Math.sin(Date.now() / 200) * 0.04;
+                ctx.scale(pulse, pulse);
+
+                // 可愛花盆
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.moveTo(-9, 14); ctx.lineTo(9, 14); ctx.lineTo(12, 0); ctx.lineTo(-12, 0);
+                ctx.closePath(); ctx.fill();
+
+                // 大頭圓綠葉
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath();
+                ctx.arc(-7, -8, 10, 0, Math.PI * 2);
+                ctx.arc(7, -8, 10, 0, Math.PI * 2);
+                ctx.arc(0, -16, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 淺綠亮點
+                ctx.fillStyle = '#34d399';
+                ctx.beginPath();
+                ctx.arc(3, -11, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            },
+
+            // 肥厚可愛公文櫃 🗄️
+            drawCabinet: (ctx, x, y) => {
+                ctx.save();
+                ctx.translate(x, y);
+
+                // 外殼 (鵝黃亮色)
+                ctx.fillStyle = '#f1f5f9';
+                ctx.beginPath();
+                ctx.roundRect(-13, -17, 26, 32, 6);
+                ctx.fill();
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // 抽屜面板 (可愛粉藍)
+                ctx.fillStyle = '#93c5fd';
+                ctx.beginPath();
+                ctx.roundRect(-9, -13, 18, 7, 2);
+                ctx.roundRect(-9, -3, 18, 7, 2);
+                ctx.roundRect(-9, 7, 18, 7, 2);
+                ctx.fill();
+
+                // 黑色小拉手
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-3, -10.5, 6, 2);
+                ctx.fillRect(-3, -0.5, 6, 2);
+                ctx.fillRect(-3, 9.5, 6, 2);
+
+                ctx.restore();
+            },
+
+            // 會在原地可愛跳躍的「黃金外帶美式 ☕」
+            drawCoffee: (ctx, x, y, hover) => {
+                ctx.save();
+                ctx.translate(x, y + hover);
+
+                // 黃色發光粒子環
+                const glow = Math.sin(Date.now() / 100) * 4;
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.15)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 16 + glow, 0, Math.PI*2);
+                ctx.fill();
+
+                // 外帶杯杯身
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.moveTo(-7, 10); ctx.lineTo(7, 10); ctx.lineTo(10, -5); ctx.lineTo(-10, -5);
+                ctx.closePath(); ctx.fill();
+
+                // 隔熱咖啡圈
+                ctx.fillStyle = '#b45309';
+                ctx.fillRect(-8.5, -2, 17, 7);
+
+                // 杯蓋
+                ctx.fillStyle = '#451a03';
+                ctx.beginPath();
+                ctx.roundRect(-11, -9, 22, 5, 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        };
+
+        // --- 3. 遊戲角色列表 ---
+        const CHARACTERS = [
+            { name: '爆肝工程師', speed: 1.25, scale: 1.0, coffeeTime: 5500, desc: '起步較快，寫程式練出好腿力。' },
+            { name: '菜鳥實習生', speed: 1.0, scale: 0.8, coffeeTime: 5000, desc: '身體嬌小，容易在辦公室夾縫生存。' },
+            { name: '全能秘書', speed: 1.0, scale: 1.0, coffeeTime: 8000, desc: '極度依賴黑咖啡，神盾無敵時間極長。' },
+            { name: '黃金業務', speed: 1.0, scale: 1.0, coffeeTime: 5000, sideSpeed: 1.6, desc: '橫向閃避與切入移動極快。' }
+        ];
+
+        let selectedCharIndex = 0;
+        function selectChar(index) {
+            selectedCharIndex = index;
+            document.querySelectorAll('.char-card').forEach((card, idx) => {
+                if (idx === index) {
+                    card.classList.add('border-yellow-400', 'bg-indigo-900');
+                    card.classList.remove('border-indigo-800');
+                } else {
+                    card.classList.remove('border-yellow-400', 'bg-indigo-900');
+                    card.classList.add('border-indigo-800');
+                }
+            });
+        }
+
+        // 預覽繪製
+        function drawPreviews() {
+            for (let i = 0; i < CHARACTERS.length; i++) {
+                const pCanvas = document.createElement('canvas');
+                pCanvas.width = 44;
+                pCanvas.height = 44;
+                const pCtx = pCanvas.getContext('2d');
+                VectorGraphics.drawPlayer(pCtx, 22, 28, i, 0, 'live', 1);
+                
+                const container = document.getElementById(`preview-${i}`);
+                if (container) {
+                    container.innerHTML = '';
+                    container.appendChild(pCanvas);
+                }
+            }
+        }
+
+        // --- 4. 遊戲核心狀態變數 ---
+        const GRID_SIZE = 50;
+        const COLS = 9;
+        let scaleFactor = 1;
+
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('office_crossy_high_v3') || '0');
+        document.getElementById('highScoreDisplay').innerText = `${highScore.toString().padStart(3, '0')} F`;
+
+        let gameState = 'start';
+        let globalFrame = 0;
+
+        // 玩家物件
+        let player = {
+            gridX: 4,
+            gridY: 0,
+            x: 4 * GRID_SIZE,
+            y: 0,
+            targetX: 4 * GRID_SIZE,
+            targetY: 0,
+            moveProgress: 1,
+            moveDir: {dx: 0, dy: 1}, // 移動朝向
+            character: CHARACTERS[0],
+            isCoffeeActive: false,
+            coffeeTimer: 0,
+            maxCoffeeTimer: 1
+        };
+
+        // 結束遊戲特有動畫狀態變數 (大升級：不再直接切換結算，而是播完動畫才結算)
+        let gameOverAnim = {
+            active: false,
+            type: '',       // 'splash'落水 | 'dead'被撞 | 'crushed'被壓扁
+            reason: '',
+            timer: 0,
+            maxTimer: 90,   // 動態影格長度 (~1.5秒)
+            x: 0,
+            y: 0,
+            playerGridY: 0
+        };
+
+        let lanes = {};
+        const LANE_TYPES = {
+            SAFE: 'safe',
+            ROAD: 'road',
+            WATER: 'water'
+        };
+
+        let cameraY = 0;
+        let maxPlayerY = 0;
+
+        // 裁員黑名單夾板 Y 座標 (萌化具象追趕者)
+        let layoffY = -150;
+        let layoffBaseSpeed = 0.45;
+
+        // 可愛爆汁與特效粒子
+        let particles = [];
+        function spawnParticles(x, y, color, count = 10, sizeRange = {min: 3, max: 7}) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 7,
+                    vy: (Math.random() - 0.7) * 7,
+                    size: sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min),
+                    color: color,
+                    alpha: 1.0,
+                    life: 25 + Math.random() * 25
+                });
+            }
+        }
+
+        // --- 5. 跑道動態建構邏輯 ---
+        function getLane(y) {
+            if (lanes[y]) return lanes[y];
+
+            let type = LANE_TYPES.SAFE;
+            let speed = 0;
+            let dir = 1;
+            let color = '';
+            let obstacles = [];
+            let logs = [];
+            let items = [];
+
+            if (y === 0) {
+                type = LANE_TYPES.SAFE;
+                color = '#312e81'; // 起點安全大廳：可愛深藍磚
+            } else if (y < 4) {
+                type = Math.random() < 0.6 ? LANE_TYPES.SAFE : LANE_TYPES.ROAD;
+            } else {
+                const rand = Math.random();
+                if (rand < 0.35) type = LANE_TYPES.SAFE;
+                else if (rand < 0.75) type = LANE_TYPES.ROAD;
+                else type = LANE_TYPES.WATER;
+            }
+
+            if (type === LANE_TYPES.ROAD) {
+                dir = Math.random() < 0.5 ? 1 : -1;
+                speed = (1.1 + Math.random() * 2.2) * (1 + Math.min(y / 150, 0.8)) * dir;
+                color = y % 2 === 0 ? '#334155' : '#1e293b'; // 灰色死線車道
+
+                // 移動障礙物
+                const numObstacles = 2 + Math.floor(Math.random() * 2);
+                const gap = (COLS * GRID_SIZE) / numObstacles;
+                for (let i = 0; i < numObstacles; i++) {
+                    const startX = i * gap + Math.random() * 40;
+                    const obsTypes = ['boss', 'paper', 'phone', 'copier'];
+                    const chosenType = obsTypes[Math.floor(Math.random() * obsTypes.length)];
+                    obstacles.push({
+                        x: startX,
+                        width: 32,
+                        height: 32,
+                        type: chosenType
+                    });
+                }
+            } else if (type === LANE_TYPES.WATER) {
+                dir = Math.random() < 0.5 ? 1 : -1;
+                speed = (0.7 + Math.random() * 1.4) * (1 + Math.min(y / 200, 0.5)) * dir;
+                color = '#451a03'; // 可愛巧克力熱咖啡河道色
+
+                // 漂浮物
+                const numLogs = 3 + Math.floor(Math.random() * 1);
+                const gap = (COLS * GRID_SIZE) / numLogs;
+                for (let i = 0; i < numLogs; i++) {
+                    const startX = i * gap + Math.random() * 30;
+                    const logWidth = 70 + Math.random() * 35;
+                    const chosenType = Math.random() < 0.65 ? 'keyboard' : 'chair';
+                    logs.push({
+                        x: startX,
+                        width: logWidth,
+                        height: 36,
+                        type: chosenType
+                    });
+                }
+            } else {
+                // 安全區粉嫩綠毯
+                color = y % 2 === 0 ? '#065f46' : '#047857';
+                
+                const possibleCols = [1, 2, 3, 4, 5, 6, 7];
+                const count = Math.floor(Math.random() * 3);
+                for (let i = 0; i < count; i++) {
+                    if (possibleCols.length === 0) break;
+                    const idx = Math.floor(Math.random() * possibleCols.length);
+                    const col = possibleCols.splice(idx, 1)[0];
+                    const staticType = Math.random() < 0.5 ? 'plant' : 'cabinet';
+                    obstacles.push({
+                        gridX: col,
+                        type: staticType
+                    });
+                }
+            }
+
+            // 咖啡 ☕ 能量道具
+            if (y > 2 && Math.random() < 0.22) {
+                const itemCol = Math.floor(Math.random() * (COLS - 2)) + 1;
+                const isOverlap = obstacles.some(obs => obs.gridX === itemCol);
+                if (!isOverlap) {
+                    items.push({
+                        gridX: itemCol,
+                        type: 'coffee',
+                        collected: false
+                    });
+                }
+            }
+
+            lanes[y] = {
+                y: y,
+                type: type,
+                speed: speed,
+                dir: dir,
+                color: color,
+                obstacles: obstacles,
+                logs: logs,
+                items: items
+            };
+
+            return lanes[y];
+        }
+
+        function cleanOldLanes(playerY) {
+            Object.keys(lanes).forEach(k => {
+                if (parseInt(k) < playerY - 12) delete lanes[k];
+            });
+        }
+
+        // --- 6. 遊戲控制與移動判定 ---
+        function movePlayer(dx, dy) {
+            if (gameState !== 'playing' || gameOverAnim.active) return;
+
+            let nextGridX = player.gridX + dx;
+            let nextGridY = player.gridY + dy;
+
+            if (nextGridX < 0 || nextGridX >= COLS) return;
+            if (nextGridY < 0) return;
+
+            const targetLane = getLane(nextGridY);
+            if (targetLane.type === LANE_TYPES.SAFE) {
+                const hitStatic = targetLane.obstacles.some(obs => obs.gridX === nextGridX);
+                if (hitStatic) return;
+            }
+
+            // 紀錄方向朝向
+            player.moveDir = {dx: dx, dy: dy};
+
+            player.gridX = nextGridX;
+            player.gridY = nextGridY;
+            player.moveProgress = 0;
+            player.startX = player.x;
+            player.startY = player.y;
+
+            let speedBonus = 1;
+            if (dx !== 0 && player.character.name === '黃金業務') {
+                speedBonus = player.character.sideSpeed || 1.4;
+            }
+
+            player.targetX = player.gridX * GRID_SIZE;
+            player.targetY = player.gridY * GRID_SIZE;
+
+            playSound('jump');
+
+            if (player.gridY > maxPlayerY) {
+                maxPlayerY = player.gridY;
+                score = maxPlayerY;
+                document.getElementById('scoreDisplay').innerHTML = `${score.toString().padStart(3, '0')} <span class="text-sm font-normal text-white">F</span>`;
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('office_crossy_high_v3', highScore);
+                    document.getElementById('highScoreDisplay').innerText = `${highScore.toString().padStart(3, '0')} F`;
+                }
+            }
+        }
+
+        // 鍵盤監聽
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing' || gameOverAnim.active) return;
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', ' ', 'w', 's', 'a', 'd'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+
+            switch(e.key.toLowerCase()) {
+                case 'arrowup':
+                case 'w':
+                    movePlayer(0, 1);
+                    break;
+                case 'arrowdown':
+                case 's':
+                    movePlayer(0, -1);
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    movePlayer(-1, 0);
+                    break;
+                case 'arrowright':
+                case 'd':
+                    movePlayer(1, 0);
+                    break;
+            }
+        });
+
+        // 虛擬搖桿綁定
+        document.getElementById('btnUp').addEventListener('click', (e) => { e.preventDefault(); movePlayer(0, 1); });
+        document.getElementById('btnDown').addEventListener('click', (e) => { e.preventDefault(); movePlayer(0, -1); });
+        document.getElementById('btnLeft').addEventListener('click', (e) => { e.preventDefault(); movePlayer(-1, 0); });
+        document.getElementById('btnRight').addEventListener('click', (e) => { e.preventDefault(); movePlayer(1, 0); });
+
+        // 觸控滑動手勢
+        let touchStartX = 0;
+        let touchStartY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (gameState !== 'playing' || gameOverAnim.active) return;
+            const diffX = e.changedTouches[0].screenX - touchStartX;
+            const diffY = e.changedTouches[0].screenY - touchStartY;
+            const threshold = 30;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > threshold) movePlayer(1, 0);
+                else if (diffX < -threshold) movePlayer(-1, 0);
+            } else {
+                if (diffY < -threshold) movePlayer(0, 1);
+                else if (diffY > threshold) movePlayer(0, -1);
+            }
+        }, { passive: true });
+
+        function resizeCanvas() {
+            const parentWidth = canvas.parentElement.clientWidth;
+            const parentHeight = canvas.parentElement.clientHeight;
+            canvas.width = COLS * GRID_SIZE;
+            canvas.height = parentHeight * (canvas.width / parentWidth);
+            scaleFactor = parentWidth / canvas.width;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+
+        // --- 7. 更新與物理迴圈 ---
+        function updateGame() {
+            globalFrame++;
+
+            // A. 先處理玩家死後戲劇動畫更新
+            if (gameOverAnim.active) {
+                gameOverAnim.timer++;
+                
+                // 動態噴射一些趣味碎片粒子
+                if (gameOverAnim.type === 'splash' && gameOverAnim.timer < 30) {
+                    // 水花與咖啡滴
+                    spawnParticles(gameOverAnim.x, -gameOverAnim.y, '#fbbf24', 2, {min: 2, max: 5});
+                    spawnParticles(gameOverAnim.x, -gameOverAnim.y, '#78350f', 3, {min: 3, max: 7});
+                } else if (gameOverAnim.type === 'dead' && gameOverAnim.timer < 25) {
+                    // 愛心/亮點/眼球靈魂碎片
+                    spawnParticles(gameOverAnim.x, -gameOverAnim.y, '#ec4899', 2, {min: 2, max: 5});
+                } else if (gameOverAnim.type === 'crushed' && gameOverAnim.timer < 30) {
+                    // 薪資袋碎片/報表紙
+                    spawnParticles(gameOverAnim.x, -gameOverAnim.y + 10, '#f1f5f9', 2, {min: 1, max: 4});
+                }
+
+                // 當動畫播完後，切換到終極 Game Over 結算面板
+                if (gameOverAnim.timer >= gameOverAnim.maxTimer) {
+                    gameOverAnim.active = false;
+                    triggerFinalGameOver(gameOverAnim.type, gameOverAnim.reason);
+                }
+                return; // 凍結其他動作，純播放死掉動畫
+            }
+
+            if (gameState !== 'playing') return;
+
+            // B. 正常更新玩家移動
+            if (player.moveProgress < 1) {
+                const speedMult = player.character.speed || 1.0;
+                player.moveProgress += 0.16 * speedMult;
+                if (player.moveProgress > 1) player.moveProgress = 1;
+                
+                player.x = player.startX + (player.targetX - player.startX) * player.moveProgress;
+                player.y = player.startY + (player.targetY - player.startY) * player.moveProgress;
+            } else {
+                player.x = player.targetX;
+                player.y = player.targetY;
+            }
+
+            // C. 粒子更新
+            particles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.12; // 萌系微重力
+                p.life--;
+                p.alpha = Math.max(0, p.life / 40);
+                if (p.life <= 0) particles.splice(idx, 1);
+            });
+
+            // D. 跑道及移動物體更新
+            const minRenderY = Math.max(0, Math.floor(cameraY / GRID_SIZE) - 3);
+            const maxRenderY = minRenderY + Math.ceil(canvas.height / GRID_SIZE) + 4;
+
+            for (let y = minRenderY; y <= maxRenderY; y++) {
+                const lane = getLane(y);
+
+                if (lane.type === LANE_TYPES.ROAD) {
+                    lane.obstacles.forEach(obs => {
+                        obs.x += lane.speed;
+                        const canvasWidth = COLS * GRID_SIZE;
+                        if (lane.speed > 0 && obs.x > canvasWidth + 50) obs.x = -50;
+                        else if (lane.speed < 0 && obs.x < -50) obs.x = canvasWidth + 50;
+                    });
+                }
+
+                if (lane.type === LANE_TYPES.WATER) {
+                    lane.logs.forEach(log => {
+                        log.x += lane.speed;
+                        const canvasWidth = COLS * GRID_SIZE;
+                        if (lane.speed > 0 && log.x > canvasWidth + 100) log.x = -100;
+                        else if (lane.speed < 0 && log.x < -100) log.x = canvasWidth + 100;
+                    });
+                }
+            }
+
+            // E. 咖啡河隨木漂浮判定
+            const currentLane = getLane(player.gridY);
+            if (currentLane.type === LANE_TYPES.WATER) {
+                let onLog = false;
+                let logSpeed = 0;
+
+                currentLane.logs.forEach(log => {
+                    const logLeft = log.x;
+                    const logRight = log.x + log.width;
+                    const playerCenterX = player.x + GRID_SIZE / 2;
+
+                    if (playerCenterX >= logLeft && playerCenterX <= logRight) {
+                        onLog = true;
+                        logSpeed = currentLane.speed;
+                    }
+                });
+
+                if (onLog) {
+                    player.targetX += logSpeed;
+                    player.x += logSpeed;
+                    player.gridX = Math.round(player.x / GRID_SIZE);
+
+                    if (player.x < -GRID_SIZE/2 || player.x > COLS * GRID_SIZE - GRID_SIZE/2) {
+                        startGameOverAnimation('splash', '不小心從電競鍵盤上滑倒...撲通！全身淹在冰美式咖啡裡了。');
+                        return;
+                    }
+                } else {
+                    if (player.moveProgress >= 0.85) {
+                        if (!player.isCoffeeActive) {
+                            startGameOverAnimation('splash', '沒有踩穩辦公椅！撲通！跌入裝滿拿鐵的咖啡海裡。');
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // F. 障礙物與美式咖啡碰撞
+            if (player.moveProgress >= 0.45) {
+                if (currentLane.type === LANE_TYPES.ROAD) {
+                    currentLane.obstacles.forEach(obs => {
+                        const playerLeft = player.x + (GRID_SIZE * (1 - player.character.scale)) / 2;
+                        const playerRight = playerLeft + GRID_SIZE * player.character.scale;
+                        const obsLeft = obs.x;
+                        const obsRight = obs.x + obs.width;
+
+                        if (playerRight > obsLeft && playerLeft < obsRight) {
+                            if (player.isCoffeeActive) {
+                                // 喝了咖啡，大腳撞飛老闆！
+                                obs.x = -999;
+                                spawnParticles(obs.x + 16, -player.y + 25, '#fbbf24', 15);
+                                playSound('jump');
+                            } else {
+                                let reason = '迎面撞上超生氣大頭老闆，被當場捉去小房間扣薪水！';
+                                if (obs.type === 'paper') reason = '被飛來的急件公文當頭砸中，失去意識！';
+                                if (obs.type === 'phone') reason = '電話連環 Call 震耳欲聾，耳鳴神智不清。';
+                                if (obs.type === 'copier') reason = '影印機夾紙故障噴出漫天灰塵蒸汽！';
+                                startGameOverAnimation('dead', reason);
+                            }
+                        }
+                    });
+                }
+
+                // 2. 吃咖啡能量道具
+                currentLane.items.forEach(item => {
+                    if (!item.collected && item.type === 'coffee' && player.gridX === item.gridX) {
+                        item.collected = true;
+                        activateCoffeeMode();
+                    }
+                });
+            }
+
+            // G. 咖啡神盾倒數
+            if (player.isCoffeeActive) {
+                player.coffeeTimer--;
+                const bar = document.getElementById('coffeeShieldBar');
+                const progress = document.getElementById('shieldProgress');
+                bar.classList.remove('hidden');
+                progress.style.width = `${(player.coffeeTimer / player.maxCoffeeTimer) * 100}%`;
+
+                if (player.coffeeTimer <= 0) {
+                    player.isCoffeeActive = false;
+                    bar.classList.add('hidden');
+                }
+            }
+
+            // H. 裁員黑名單升起與追趕
+            const difficultyScale = 1 + Math.min(score / 90, 1.8);
+            layoffY += layoffBaseSpeed * difficultyScale;
+
+            const distanceToLayoff = player.y - layoffY;
+            const warningBanner = document.getElementById('warningBanner');
+            if (distanceToLayoff < 130) {
+                warningBanner.classList.remove('hidden');
+                if (globalFrame % 45 === 0) playSound('warn');
+            } else {
+                warningBanner.classList.add('hidden');
+            }
+
+            // 被夾板吃掉
+            if (player.y < layoffY + 12) {
+                startGameOverAnimation('crushed', '動作太慢！被後方前進的「裁員黑名單夾板」無情拍扁資遣！');
+                return;
+            }
+
+            // I. 攝影機 Camera Y
+            const targetCamY = player.y - GRID_SIZE * 3.5;
+            if (targetCamY > cameraY) {
+                cameraY += (targetCamY - cameraY) * 0.12;
+            } else if (cameraY - player.y > GRID_SIZE * 2) {
+                player.gridY = Math.ceil(cameraY / GRID_SIZE) - 2;
+                player.targetY = player.gridY * GRID_SIZE;
+            }
+
+            if (globalFrame % 120 === 0) {
+                cleanOldLanes(player.gridY);
+            }
+        }
+
+        // 觸發黑咖啡
+        function activateCoffeeMode() {
+            player.isCoffeeActive = true;
+            player.coffeeTimer = player.character.coffeeTime / 16.6;
+            player.maxCoffeeTimer = player.coffeeTimer;
+            spawnParticles(player.x + 25, -player.y + 25, '#fbbf24', 18, {min: 4, max: 9});
+            playSound('coffee');
+        }
+
+        // --- 8. 精緻死亡/結束動作啟動器 ---
+        function startGameOverAnimation(type, reason) {
+            gameOverAnim.active = true;
+            gameOverAnim.type = type;
+            gameOverAnim.reason = reason;
+            gameOverAnim.timer = 0;
+            gameOverAnim.x = player.x + GRID_SIZE / 2;
+            gameOverAnim.y = player.y - GRID_SIZE / 2;
+            gameOverAnim.playerGridY = player.gridY;
+
+            // 觸發音效
+            if (type === 'splash') {
+                playSound('splash');
+                // 水花粒子
+                spawnParticles(gameOverAnim.x, -gameOverAnim.y, '#f59e0b', 20, {min: 3, max: 8});
+            } else {
+                playSound('hit');
+                // 撞擊粒子
+                spawnParticles(gameOverAnim.x, -gameOverAnim.y, '#f43f5e', 20, {min: 4, max: 9});
+            }
+        }
+
+
+        // --- 9. Canvas 圖案渲染 (Draw) ---
+        function drawGame() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(0, canvas.height - GRID_SIZE - 50 + cameraY);
+
+            const minRenderY = Math.max(0, Math.floor(cameraY / GRID_SIZE) - 4);
+            const maxRenderY = minRenderY + Math.ceil(canvas.height / GRID_SIZE) + 5;
+
+            // A. 繪製所有路段
+            for (let y = minRenderY; y <= maxRenderY; y++) {
+                const lane = getLane(y);
+                const drawY = -y * GRID_SIZE;
+
+                ctx.fillStyle = lane.color;
+                ctx.fillRect(0, drawY, COLS * GRID_SIZE, GRID_SIZE);
+
+                // 路段特色裝飾
+                if (lane.type === LANE_TYPES.ROAD) {
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(0, drawY, COLS * GRID_SIZE, 3);
+                    ctx.fillRect(0, drawY + GRID_SIZE - 3, COLS * GRID_SIZE, 3);
+                    
+                    // 黃白雙色可愛分隔點線
+                    ctx.strokeStyle = 'rgba(251, 191, 36, 0.15)';
+                    ctx.setLineDash([10, 15]);
+                    ctx.beginPath();
+                    ctx.moveTo(0, drawY + GRID_SIZE/2);
+                    ctx.lineTo(COLS * GRID_SIZE, drawY + GRID_SIZE/2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                } else if (lane.type === LANE_TYPES.WATER) {
+                    // 咖啡河熱騰騰蒸氣線
+                    ctx.fillStyle = 'rgba(254, 243, 199, 0.05)';
+                    ctx.fillRect(0, drawY + 4, COLS * GRID_SIZE, 6);
+                } else {
+                    // 安全綠毯棋盤縫線
+                    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(0, drawY, COLS * GRID_SIZE, GRID_SIZE);
+                }
+
+                // B. 繪製靜態障礙
+                if (lane.type === LANE_TYPES.SAFE) {
+                    lane.obstacles.forEach(obs => {
+                        const obsX = obs.gridX * GRID_SIZE + GRID_SIZE/2;
+                        const obsY = drawY + GRID_SIZE/2;
+                        if (obs.type === 'plant') {
+                            VectorGraphics.drawPlant(ctx, obsX, obsY);
+                        } else {
+                            VectorGraphics.drawCabinet(ctx, obsX, obsY);
+                        }
+                    });
+                }
+
+                // C. 繪製移動障礙物
+                if (lane.type === LANE_TYPES.ROAD) {
+                    lane.obstacles.forEach(obs => {
+                        const obsY = drawY + GRID_SIZE/2;
+                        if (obs.type === 'boss') {
+                            VectorGraphics.drawBoss(ctx, obs.x, obsY, lane.speed, globalFrame);
+                        } else if (obs.type === 'paper') {
+                            VectorGraphics.drawPaper(ctx, obs.x + 16, obsY, globalFrame);
+                        } else if (obs.type === 'phone') {
+                            VectorGraphics.drawPhone(ctx, obs.x + 16, obsY, globalFrame);
+                        } else if (obs.type === 'copier') {
+                            VectorGraphics.drawCopier(ctx, obs.x + 16, obsY, globalFrame);
+                        }
+                    });
+                }
+
+                // D. 繪製漂浮物
+                if (lane.type === LANE_TYPES.WATER) {
+                    lane.logs.forEach(log => {
+                        const logY = drawY + GRID_SIZE/2;
+                        if (log.type === 'chair') {
+                            VectorGraphics.drawChair(ctx, log.x + log.width/2, logY, log.width);
+                        } else {
+                            VectorGraphics.drawKeyboard(ctx, log.x + log.width/2, logY, log.width);
+                        }
+                    });
+                }
+
+                // E. 繪製咖啡 ☕ 道具
+                lane.items.forEach(item => {
+                    if (!item.collected) {
+                        const hover = Math.sin(globalFrame / 8) * 3;
+                        VectorGraphics.drawCoffee(ctx, item.gridX * GRID_SIZE + GRID_SIZE/2, drawY + GRID_SIZE/2, hover);
+                    }
+                });
+            }
+
+            // F. 繪製裁員名單夾板 (Layoff board)
+            const stormDrawY = -layoffY;
+            
+            // 深棕木板
+            ctx.fillStyle = '#5c3d2e';
+            ctx.fillRect(0, stormDrawY, COLS * GRID_SIZE, 600);
+            
+            // 亮銀可愛金屬大夾子
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.roundRect(COLS * GRID_SIZE/2 - 60, stormDrawY - 12, 120, 24, 6);
+            ctx.fill();
+
+            // 大白色考績表紙張
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(20, stormDrawY + 15, COLS * GRID_SIZE - 40, 580, 8);
+            ctx.fill();
+
+            // 裁員血紅色大鋼印與橫線
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(40, stormDrawY + 52); ctx.lineTo(COLS * GRID_SIZE - 40, stormDrawY + 52);
+            ctx.stroke();
+
+            ctx.fillStyle = '#e11d48';
+            ctx.font = 'black 16px "Noto Sans TC"';
+            ctx.textAlign = 'center';
+            ctx.fillText('📋 裁員名單 LAYOFF LIST', COLS * GRID_SIZE/2, stormDrawY + 44);
+
+            // 飛散的紙張粒子
+            if (globalFrame % 6 === 0) {
+                particles.push({
+                    x: Math.random() * COLS * GRID_SIZE,
+                    y: stormDrawY,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: -1 - Math.random() * 2,
+                    size: 3 + Math.random() * 4,
+                    color: '#f8fafc',
+                    alpha: 0.9,
+                    life: 25
+                });
+            }
+
+            // G. 繪製粒子
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                ctx.restore();
+            });
+
+            // H. 繪製玩家角色 (如果是正常狀態 or 播放死掉動畫)
+            if (gameOverAnim.active) {
+                // 播放對應結束動畫
+                const animProgress = gameOverAnim.timer / gameOverAnim.maxTimer;
+                const pX = gameOverAnim.x;
+                const pY = -gameOverAnim.y; // 反轉相機座標
+
+                if (gameOverAnim.type === 'splash') {
+                    // 落水動畫
+                    VectorGraphics.drawPlayer(ctx, pX, pY, selectedCharIndex, globalFrame, 'splash', animProgress);
+                } else if (gameOverAnim.type === 'dead') {
+                    // 撞擊飛出 / 靈魂升天
+                    VectorGraphics.drawPlayer(ctx, pX, pY, selectedCharIndex, globalFrame, 'dead', animProgress);
+                } else if (gameOverAnim.type === 'crushed') {
+                    // 夾板壓扁
+                    VectorGraphics.drawPlayer(ctx, pX, pY, selectedCharIndex, globalFrame, 'crushed', animProgress);
+                }
+            } else {
+                // 正常遊玩繪製
+                const playerDrawX = player.x + GRID_SIZE/2;
+                const playerDrawY = -player.y + GRID_SIZE/2;
+                
+                // 無敵超炫光圈
+                if (player.isCoffeeActive) {
+                    ctx.save();
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(playerDrawX, playerDrawY, 24, 0, Math.PI*2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                VectorGraphics.drawPlayer(
+                    ctx, playerDrawX, playerDrawY, 
+                    selectedCharIndex, globalFrame, 
+                    'live', player.moveProgress, player.moveDir
+                );
+            }
+
+            ctx.restore();
+        }
+
+        // --- 10. 終極結算與重置面板 ---
+        function triggerFinalGameOver(type, reason) {
+            gameState = 'gameover';
+            
+            // 可愛生動結算插圖與動作
+            const animBox = document.getElementById('gameOverAnimBox');
+            if (type === 'splash') {
+                document.getElementById('gameOverTitle').innerText = '淹沒在熱美式中！';
+                animBox.innerHTML = `
+                    <svg class="w-10 h-10 text-amber-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                `;
+            } else if (type === 'crushed') {
+                document.getElementById('gameOverTitle').innerText = '被拍扁啦！';
+                animBox.innerHTML = `
+                    <svg class="w-10 h-10 text-rose-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                `;
+            } else {
+                document.getElementById('gameOverTitle').innerText = '被老闆捉到！';
+                animBox.innerHTML = `
+                    <span class="text-3xl">👻💼</span>
+                `;
+            }
+
+            document.getElementById('gameOverReason').innerText = `原因：${reason}`;
+            document.getElementById('finalScore').innerText = score.toString().padStart(3, '0');
+            document.getElementById('finalHighScore').innerText = `${highScore.toString().padStart(3, '0')} F`;
+
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            score = 0;
+            maxPlayerY = 0;
+            cameraY = 0;
+            layoffY = -150;
+            globalFrame = 0;
+
+            player.gridX = 4;
+            player.gridY = 0;
+            player.x = 4 * GRID_SIZE;
+            player.y = 0;
+            player.targetX = 4 * GRID_SIZE;
+            player.targetY = 0;
+            player.moveProgress = 1;
+            player.isCoffeeActive = false;
+            player.coffeeTimer = 0;
+            player.character = CHARACTERS[selectedCharIndex];
+
+            gameOverAnim.active = false;
+
+            lanes = {};
+            particles = [];
+            
+            for (let i = -2; i < 15; i++) {
+                getLane(i);
+            }
+
+            document.getElementById('scoreDisplay').innerHTML = `000 <span class="text-sm font-normal text-white">F</span>`;
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.add('hidden');
+            
+            gameState = 'playing';
+        }
+
+        // 按鈕事件
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            restartGame();
+        });
+
+        document.getElementById('btnRestart').addEventListener('click', restartGame);
+        
+        document.getElementById('btnBackToMenu').addEventListener('click', () => {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+            gameState = 'start';
+        });
+
+        selectChar(0);
+
+        // 主遊戲迴圈
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            resizeCanvas();
+            drawPreviews();
+            for (let i = -2; i < 15; i++) {
+                getLane(i);
+            }
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
